@@ -147,7 +147,8 @@ Redis 사용 위치:
 - 시간별/일별 클릭 분석 pending/processing buffer
 - IP rate limiting
 
-DB는 source of truth로 두고, Redis는 짧은 지연 시간과 높은 처리량이 필요한 경로에만 배치했습니다. 이렇게 분리하면 리다이렉트 요청 경로에서 DB write를 피할 수 있고, 짧은 URL 핫스팟 상황에서도 응답 지연과 락 경쟁을 줄일 수 있습니다.
+DB는 source of truth로 두고, Redis는 짧은 지연 시간과 높은 처리량이 필요한 경로에만 배치했습니다. 이렇게 분리하면 리다이렉트 요청 경로에서 DB write를 피할 수 있고, 짧은 URL 핫스팟
+상황에서도 응답 지연과 락 경쟁을 줄일 수 있습니다.
 
 ## 클릭 수 동기화 전략
 
@@ -164,7 +165,8 @@ DB에는 마지막으로 반영한 sync token을 함께 저장하고, 저장이 
 - 일별 집계: `day` 버킷
 
 분석 집계도 별도 스케줄러가 Redis buffer를 DB `url_click_metrics` 테이블로 반영합니다.
-analytics API는 조회 시점에 DB 버킷 집계와 Redis pending/processing buffer를 함께 읽어서 응답합니다. 즉, 분석 응답은 DB와 Redis를 모두 조회하며, DB 테이블 반영은 배치 주기로 이뤄집니다.
+analytics API는 조회 시점에 DB 버킷 집계와 Redis pending/processing buffer를 함께 읽어서 응답합니다. 즉, 분석 응답은 DB와 Redis를 모두 조회하며, DB 테이블 반영은
+배치 주기로 이뤄집니다.
 
 ## DB 반영 방식
 
@@ -203,6 +205,8 @@ analytics API는 조회 시점에 DB 버킷 집계와 Redis pending/processing b
 - Redis 인덱스의 stale member 정리 전략을 더 공격적으로 정교화
 - 배치 락에 renewal과 강제 회수 정책 추가
 - 관리자 인증을 단순 API 키보다 더 안전한 방식으로 확장
+- 서비스 레이어 패키징 고도화
 
 ## 남은 개선 포인트
+
 - 운영 환경용 Redis 인덱스 정리와 배치 락 전략 보강

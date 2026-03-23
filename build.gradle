@@ -33,6 +33,9 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
 
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -41,6 +44,8 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:testcontainers'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 

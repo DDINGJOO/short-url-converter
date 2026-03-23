@@ -4,9 +4,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(
-        String baseUrl,
-        String adminApiKey,
-        long shortCodeObfuscationKey,
-        long rateLimitPerMinute
+		String baseUrl,
+		String adminApiKey,
+		long shortCodeObfuscationKey,
+		long rateLimitPerMinute
 ) {
 }
