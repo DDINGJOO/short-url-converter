@@ -3,6 +3,7 @@ package com.ddingjoo.urlshortener.service.click;
 import com.ddingjoo.urlshortener.domain.Url;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
 import com.ddingjoo.urlshortener.service.lock.SchedulerLockService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 @Component
+@RequiredArgsConstructor
 public class ClickCountSyncScheduler {
 	
 	private static final Duration LOCK_TTL = Duration.ofSeconds(55);
@@ -21,16 +23,6 @@ public class ClickCountSyncScheduler {
 	private final ClickCountService clickCountService;
 	private final UrlRepository urlRepository;
 	private final SchedulerLockService schedulerLockService;
-	
-	public ClickCountSyncScheduler(
-			ClickCountService clickCountService,
-			UrlRepository urlRepository,
-			SchedulerLockService schedulerLockService
-	) {
-		this.clickCountService = clickCountService;
-		this.urlRepository = urlRepository;
-		this.schedulerLockService = schedulerLockService;
-	}
 	
 	@Scheduled(fixedDelayString = "${app.click-sync-interval-ms:60000}")
 	@Transactional

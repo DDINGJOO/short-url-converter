@@ -6,29 +6,27 @@ import com.ddingjoo.urlshortener.dto.url.request.ShortenRequest;
 import com.ddingjoo.urlshortener.dto.url.response.ShortenResponse;
 import com.ddingjoo.urlshortener.dto.url.response.UrlAnalyticsResponse;
 import com.ddingjoo.urlshortener.dto.url.response.UrlStatsResponse;
-import com.ddingjoo.urlshortener.exception.types.InvalidUrlException;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.service.analytics.UrlAnalyticsService;
 import com.ddingjoo.urlshortener.service.url.UrlService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
 
 @Tag(name = "URL")
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api")
 public class UrlController implements UrlApiDocs {
 	
 	private final UrlService urlService;
 	private final UrlAnalyticsService urlAnalyticsService;
-	
-	public UrlController(UrlService urlService, UrlAnalyticsService urlAnalyticsService) {
-		this.urlService = urlService;
-		this.urlAnalyticsService = urlAnalyticsService;
-	}
-	
+
 	@Override
 	@PostMapping("/shorten")
 	@ResponseStatus(HttpStatus.CREATED)
@@ -53,7 +51,7 @@ public class UrlController implements UrlApiDocs {
 		try {
 			return urlAnalyticsService.getAnalytics(shortCode, ClickMetricGranularity.from(granularity), from, to);
 		} catch (IllegalArgumentException exception) {
-			throw new InvalidUrlException("granularity must be one of [hour, day]");
+			throw new BusinessException(ErrorCode.INVALID_ANALYTICS_GRANULARITY);
 		}
 	}
 	

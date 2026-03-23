@@ -5,7 +5,8 @@ import com.ddingjoo.urlshortener.domain.Url;
 import com.ddingjoo.urlshortener.dto.url.request.ShortenRequest;
 import com.ddingjoo.urlshortener.dto.url.response.ShortenResponse;
 import com.ddingjoo.urlshortener.dto.url.response.UrlStatsResponse;
-import com.ddingjoo.urlshortener.exception.types.*;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
 import com.ddingjoo.urlshortener.service.analytics.UrlAnalyticsService;
 import com.ddingjoo.urlshortener.service.cache.UrlCacheService;
@@ -144,8 +145,9 @@ class UrlServiceTest {
 		when(urlCacheService.isGone("gone-code")).thenReturn(true);
 		
 		assertThatThrownBy(() -> urlService.resolveOriginalUrl("gone-code"))
-				.isInstanceOf(UrlGoneException.class)
-				.hasMessageContaining("no longer active");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.URL_GONE);
 	}
 	
 	@Test
@@ -199,8 +201,9 @@ class UrlServiceTest {
 				.thenReturn(Optional.of("lock-1"));
 		
 		assertThatThrownBy(() -> urlService.delete("team-docs", "wrong-key"))
-				.isInstanceOf(UnauthorizedException.class)
-				.hasMessageContaining("Invalid admin API key");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.UNAUTHORIZED_API_KEY);
 	}
 	
 	@Test
@@ -209,8 +212,9 @@ class UrlServiceTest {
 				.thenReturn(Optional.empty());
 		
 		assertThatThrownBy(() -> urlService.resolveOriginalUrl("team-docs"))
-				.isInstanceOf(ConcurrentOperationException.class)
-				.hasMessageContaining("Concurrent operation");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.CONCURRENT_OPERATION);
 	}
 	
 	@Test
@@ -218,15 +222,17 @@ class UrlServiceTest {
 		when(urlRepository.findByShortCode("missing")).thenReturn(Optional.empty());
 		
 		assertThatThrownBy(() -> urlService.getStats("missing"))
-				.isInstanceOf(UrlNotFoundException.class)
-				.hasMessageContaining("not found");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.URL_NOT_FOUND);
 	}
 	
 	@Test
 	void rejectsInvalidOriginalUrl() {
 		assertThatThrownBy(() -> urlService.shorten(new ShortenRequest("ftp://example.com", null, null)))
-				.isInstanceOf(InvalidUrlException.class)
-				.hasMessageContaining("http or https");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.INVALID_URL_SCHEME);
 	}
 	
 	@Test
@@ -234,15 +240,17 @@ class UrlServiceTest {
 		OffsetDateTime past = OffsetDateTime.now().minusMinutes(1);
 		
 		assertThatThrownBy(() -> urlService.shorten(new ShortenRequest("https://example.com", null, past)))
-				.isInstanceOf(InvalidUrlException.class)
-				.hasMessageContaining("expires_at");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.INVALID_EXPIRATION);
 	}
 	
 	@Test
 	void rejectsInvalidCustomCodeCharacters() {
 		assertThatThrownBy(() -> urlService.shorten(new ShortenRequest("https://example.com", "bad code!", null)))
-				.isInstanceOf(InvalidShortCodeException.class)
-				.hasMessageContaining("custom_code");
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.INVALID_SHORT_CODE_PATTERN);
 	}
 	
 	private Url savedUrl(

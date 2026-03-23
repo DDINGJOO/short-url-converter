@@ -1,7 +1,8 @@
 package com.ddingjoo.urlshortener.service;
 
 import com.ddingjoo.urlshortener.config.AppProperties;
-import com.ddingjoo.urlshortener.exception.types.RateLimitExceededException;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.service.ratelimit.RedisRateLimitService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +50,8 @@ class RedisRateLimitServiceTest {
 		);
 		
 		assertThatThrownBy(() -> service.validate("127.0.0.1"))
-				.isInstanceOf(RateLimitExceededException.class);
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.RATE_LIMIT_EXCEEDED);
 	}
 }

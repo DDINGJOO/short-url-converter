@@ -1,5 +1,6 @@
 package com.ddingjoo.urlshortener.service.click;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class RedisClickCountService implements ClickCountService {
 	
 	private static final String PENDING_CLICK_KEY_PREFIX = "url_clicks:pending:";
@@ -53,10 +55,6 @@ public class RedisClickCountService implements ClickCountService {
 	);
 	
 	private final StringRedisTemplate stringRedisTemplate;
-	
-	public RedisClickCountService(StringRedisTemplate stringRedisTemplate) {
-		this.stringRedisTemplate = stringRedisTemplate;
-	}
 	
 	@Override
 	public void increment(String shortCode) {

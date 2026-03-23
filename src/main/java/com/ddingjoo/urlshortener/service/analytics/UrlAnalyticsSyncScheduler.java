@@ -6,6 +6,7 @@ import com.ddingjoo.urlshortener.domain.UrlClickMetric;
 import com.ddingjoo.urlshortener.repository.UrlClickMetricRepository;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
 import com.ddingjoo.urlshortener.service.lock.SchedulerLockService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.Set;
 import java.util.function.Function;
 
 @Component
+@RequiredArgsConstructor
 public class UrlAnalyticsSyncScheduler {
 	
 	private static final Duration LOCK_TTL = Duration.ofSeconds(55);
@@ -26,18 +28,6 @@ public class UrlAnalyticsSyncScheduler {
 	private final UrlRepository urlRepository;
 	private final UrlClickMetricRepository urlClickMetricRepository;
 	private final SchedulerLockService schedulerLockService;
-	
-	public UrlAnalyticsSyncScheduler(
-			UrlAnalyticsBufferService urlAnalyticsBufferService,
-			UrlRepository urlRepository,
-			UrlClickMetricRepository urlClickMetricRepository,
-			SchedulerLockService schedulerLockService
-	) {
-		this.urlAnalyticsBufferService = urlAnalyticsBufferService;
-		this.urlRepository = urlRepository;
-		this.urlClickMetricRepository = urlClickMetricRepository;
-		this.schedulerLockService = schedulerLockService;
-	}
 	
 	@Scheduled(fixedDelayString = "${app.analytics-sync-interval-ms:60000}")
 	@Transactional

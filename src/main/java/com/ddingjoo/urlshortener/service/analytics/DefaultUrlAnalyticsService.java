@@ -5,10 +5,11 @@ import com.ddingjoo.urlshortener.domain.Url;
 import com.ddingjoo.urlshortener.domain.UrlClickMetric;
 import com.ddingjoo.urlshortener.dto.url.response.ClickAnalyticsPointResponse;
 import com.ddingjoo.urlshortener.dto.url.response.UrlAnalyticsResponse;
-import com.ddingjoo.urlshortener.exception.types.InvalidUrlException;
-import com.ddingjoo.urlshortener.exception.types.UrlNotFoundException;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.repository.UrlClickMetricRepository;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,21 +22,12 @@ import java.util.function.Function;
 import java.util.stream.Stream;
 
 @Service
+@RequiredArgsConstructor
 public class DefaultUrlAnalyticsService implements UrlAnalyticsService {
 	
 	private final UrlRepository urlRepository;
 	private final UrlClickMetricRepository urlClickMetricRepository;
 	private final UrlAnalyticsBufferService urlAnalyticsBufferService;
-	
-	public DefaultUrlAnalyticsService(
-			UrlRepository urlRepository,
-			UrlClickMetricRepository urlClickMetricRepository,
-			UrlAnalyticsBufferService urlAnalyticsBufferService
-	) {
-		this.urlRepository = urlRepository;
-		this.urlClickMetricRepository = urlClickMetricRepository;
-		this.urlAnalyticsBufferService = urlAnalyticsBufferService;
-	}
 	
 	@Override
 	public void recordClick(String shortCode, OffsetDateTime clickedAt) {
@@ -52,11 +44,11 @@ public class DefaultUrlAnalyticsService implements UrlAnalyticsService {
 			OffsetDateTime to
 	) {
 		if (from.isAfter(to)) {
-			throw new InvalidUrlException("from must be before or equal to to");
+			throw new BusinessException(ErrorCode.INVALID_ANALYTICS_RANGE);
 		}
 		
 		Url url = urlRepository.findByShortCode(shortCode)
-				.orElseThrow(UrlNotFoundException::new);
+				.orElseThrow(() -> new BusinessException(ErrorCode.URL_NOT_FOUND));
 		
 		OffsetDateTime normalizedFrom = granularity.normalize(from);
 		OffsetDateTime normalizedTo = granularity.normalize(to);

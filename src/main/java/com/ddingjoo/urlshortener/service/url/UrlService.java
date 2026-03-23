@@ -5,13 +5,15 @@ import com.ddingjoo.urlshortener.domain.Url;
 import com.ddingjoo.urlshortener.dto.url.request.ShortenRequest;
 import com.ddingjoo.urlshortener.dto.url.response.ShortenResponse;
 import com.ddingjoo.urlshortener.dto.url.response.UrlStatsResponse;
-import com.ddingjoo.urlshortener.exception.types.*;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
 import com.ddingjoo.urlshortener.service.analytics.UrlAnalyticsService;
 import com.ddingjoo.urlshortener.service.cache.UrlCacheService;
 import com.ddingjoo.urlshortener.service.click.ClickBufferState;
 import com.ddingjoo.urlshortener.service.click.ClickCountService;
 import com.ddingjoo.urlshortener.service.lock.SchedulerLockService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 
 @Service
+@RequiredArgsConstructor
 public class UrlService {
 	
 	private static final int MAX_GENERATION_ATTEMPTS = 5;
@@ -35,24 +38,6 @@ public class UrlService {
 	private final ClickCountService clickCountService;
 	private final UrlAnalyticsService urlAnalyticsService;
 	private final SchedulerLockService schedulerLockService;
-	
-	public UrlService(
-			UrlRepository urlRepository,
-			ShortCodeGenerator shortCodeGenerator,
-			AppProperties appProperties,
-			UrlCacheService urlCacheService,
-			ClickCountService clickCountService,
-			UrlAnalyticsService urlAnalyticsService,
-			SchedulerLockService schedulerLockService
-	) {
-		this.urlRepository = urlRepository;
-		this.shortCodeGenerator = shortCodeGenerator;
-		this.appProperties = appProperties;
-		this.urlCacheService = urlCacheService;
-		this.clickCountService = clickCountService;
-		this.urlAnalyticsService = urlAnalyticsService;
-		this.schedulerLockService = schedulerLockService;
-	}
 	
 	@Transactional
 	public ShortenResponse shorten(ShortenRequest request) {
@@ -74,34 +59,40 @@ public class UrlService {
 			urlCacheService.cacheActive(savedUrl);
 			return toResponse(savedUrl);
 		} catch (DataIntegrityViolationException exception) {
-			throw new CodeConflictException();
+			throw new BusinessException(ErrorCode.SHORT_CODE_CONFLICT);
 		}
 	}
 	
 	private ShortenResponse shortenWithGeneratedCode(String originalUrl, OffsetDateTime expiresAt) {
 		for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-			Long nextId = urlRepository.nextId();
-			String shortCode = shortCodeGenerator.generate(nextId);
-			
-			try {
-				Url url = Url.create(nextId, shortCode, originalUrl, expiresAt);
-				Url savedUrl = urlRepository.save(url);
-				urlCacheService.cacheActive(savedUrl);
-				return toResponse(savedUrl);
-			} catch (DataIntegrityViolationException exception) {
-				// Generated codes are deterministic, so a conflict means a custom code occupied this value.
-				// Retry with the next reserved sequence value.
+			ShortenResponse response = tryCreateGeneratedShortUrl(originalUrl, expiresAt);
+			if (response != null) {
+				return response;
 			}
 		}
 		
-		throw new CodeConflictException("Failed to generate a unique short code after retry budget");
+		throw new BusinessException(ErrorCode.SHORT_CODE_GENERATION_EXHAUSTED);
+	}
+	
+	private ShortenResponse tryCreateGeneratedShortUrl(String originalUrl, OffsetDateTime expiresAt) {
+		Long nextId = urlRepository.nextId();
+		String shortCode = shortCodeGenerator.generate(nextId);
+		
+		try {
+			Url url = Url.create(nextId, shortCode, originalUrl, expiresAt);
+			Url savedUrl = urlRepository.save(url);
+			urlCacheService.cacheActive(savedUrl);
+			return toResponse(savedUrl);
+		} catch (DataIntegrityViolationException exception) {
+			return null;
+		}
 	}
 	
 	@Transactional(readOnly = true)
 	public String resolveOriginalUrl(String shortCode) {
 		return withShortCodeLock(shortCode, () -> {
 			if (urlCacheService.isGone(shortCode)) {
-				throw new UrlGoneException();
+				throw new BusinessException(ErrorCode.URL_GONE);
 			}
 			
 			OffsetDateTime clickedAt = OffsetDateTime.now();
@@ -118,7 +109,7 @@ public class UrlService {
 	@Transactional(readOnly = true)
 	public UrlStatsResponse getStats(String shortCode) {
 		Url url = urlRepository.findByShortCode(shortCode)
-				.orElseThrow(UrlNotFoundException::new);
+				.orElseThrow(() -> new BusinessException(ErrorCode.URL_NOT_FOUND));
 		
 		ClickBufferState bufferedState = clickCountService.getBufferedState(shortCode);
 		long totalClicks = java.util.stream.LongStream.of(
@@ -143,7 +134,7 @@ public class UrlService {
 			validateAuthorization(authorizationHeader);
 			
 			Url url = urlRepository.findByShortCode(shortCode)
-					.orElseThrow(UrlNotFoundException::new);
+					.orElseThrow(() -> new BusinessException(ErrorCode.URL_NOT_FOUND));
 			
 			if (!url.isDeleted()) {
 				url.markDeleted();
@@ -175,11 +166,11 @@ public class UrlService {
 	
 	private String resolveFromDatabase(String shortCode, OffsetDateTime clickedAt) {
 		Url url = urlRepository.findByShortCode(shortCode)
-				.orElseThrow(UrlNotFoundException::new);
+				.orElseThrow(() -> new BusinessException(ErrorCode.URL_NOT_FOUND));
 		
 		if (!url.isActive(OffsetDateTime.now())) {
 			urlCacheService.markGone(shortCode);
-			throw new UrlGoneException();
+			throw new BusinessException(ErrorCode.URL_GONE);
 		}
 		
 		urlCacheService.cacheActive(url);
@@ -193,13 +184,13 @@ public class UrlService {
 			URI uri = new URI(originalUrl);
 			String scheme = uri.getScheme();
 			if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-				throw new InvalidUrlException("original_url must use http or https");
+				throw new BusinessException(ErrorCode.INVALID_URL_SCHEME);
 			}
 			if (uri.getHost() == null || uri.getHost().isBlank()) {
-				throw new InvalidUrlException("original_url must include a valid host");
+				throw new BusinessException(ErrorCode.INVALID_URL_HOST);
 			}
 		} catch (URISyntaxException exception) {
-			throw new InvalidUrlException("original_url is not a valid URI");
+			throw new BusinessException(ErrorCode.INVALID_URL_SYNTAX);
 		}
 	}
 	
@@ -209,7 +200,7 @@ public class UrlService {
 		}
 		
 		if (!customCode.matches("^[A-Za-z0-9_-]{1,20}$")) {
-			throw new InvalidShortCodeException("custom_code must match [A-Za-z0-9_-]{1,20}");
+			throw new BusinessException(ErrorCode.INVALID_SHORT_CODE_PATTERN);
 		}
 		
 		return customCode;
@@ -217,13 +208,13 @@ public class UrlService {
 	
 	private void validateExpiration(OffsetDateTime expiresAt) {
 		if (expiresAt != null && !expiresAt.isAfter(OffsetDateTime.now())) {
-			throw new InvalidUrlException("expires_at must be in the future");
+			throw new BusinessException(ErrorCode.INVALID_EXPIRATION);
 		}
 	}
 	
 	private void validateAuthorization(String authorizationHeader) {
 		if (!Objects.equals(appProperties.adminApiKey(), authorizationHeader)) {
-			throw new UnauthorizedException();
+			throw new BusinessException(ErrorCode.UNAUTHORIZED_API_KEY);
 		}
 	}
 	
@@ -247,7 +238,7 @@ public class UrlService {
 			sleepBackoff();
 		}
 		
-		throw new ConcurrentOperationException();
+		throw new BusinessException(ErrorCode.CONCURRENT_OPERATION);
 	}
 	
 	private void sleepBackoff() {
@@ -255,7 +246,7 @@ public class UrlService {
 			Thread.sleep(25L);
 		} catch (InterruptedException exception) {
 			Thread.currentThread().interrupt();
-			throw new ConcurrentOperationException();
+			throw new BusinessException(ErrorCode.CONCURRENT_OPERATION);
 		}
 	}
 }

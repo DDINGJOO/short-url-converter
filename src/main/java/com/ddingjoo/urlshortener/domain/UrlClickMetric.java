@@ -1,9 +1,16 @@
 package com.ddingjoo.urlshortener.domain;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EqualsAndHashCode(of = "id")
 @Entity
 @Table(name = "url_click_metrics")
 public class UrlClickMetric {
@@ -33,10 +40,7 @@ public class UrlClickMetric {
 	
 	@Column(name = "updated_at", nullable = false)
 	private OffsetDateTime updatedAt;
-	
-	protected UrlClickMetric() {
-	}
-	
+
 	private UrlClickMetric(Long urlId, ClickMetricGranularity granularity, OffsetDateTime bucketStart) {
 		this.urlId = urlId;
 		this.granularity = granularity;
@@ -60,26 +64,6 @@ public class UrlClickMetric {
 		this.updatedAt = OffsetDateTime.now();
 	}
 	
-	public Long getUrlId() {
-		return urlId;
-	}
-	
-	public ClickMetricGranularity getGranularity() {
-		return granularity;
-	}
-	
-	public OffsetDateTime getBucketStart() {
-		return bucketStart;
-	}
-	
-	public long getClickCount() {
-		return clickCount;
-	}
-	
-	public String getLastSyncToken() {
-		return lastSyncToken;
-	}
-	
 	public void incrementClickCount(long delta) {
 		this.clickCount += delta;
 	}
@@ -88,4 +72,3 @@ public class UrlClickMetric {
 		this.lastSyncToken = token;
 	}
 }
-

@@ -1,9 +1,16 @@
 package com.ddingjoo.urlshortener.domain;
 
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.OffsetDateTime;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EqualsAndHashCode(of = "id")
 @Entity
 @Table(name = "urls")
 public class Url {
@@ -34,10 +41,7 @@ public class Url {
 	
 	@Column(name = "last_click_sync_token", length = 64)
 	private String lastClickSyncToken;
-	
-	protected Url() {
-	}
-	
+
 	private Url(Long id, String shortCode, String originalUrl, OffsetDateTime expiresAt) {
 		this.id = id;
 		this.shortCode = shortCode;
@@ -61,42 +65,6 @@ public class Url {
 	@PreUpdate
 	public void onUpdate() {
 		this.updatedAt = OffsetDateTime.now();
-	}
-	
-	public Long getId() {
-		return id;
-	}
-	
-	public String getShortCode() {
-		return shortCode;
-	}
-	
-	public String getOriginalUrl() {
-		return originalUrl;
-	}
-	
-	public long getClickCount() {
-		return clickCount;
-	}
-	
-	public OffsetDateTime getExpiresAt() {
-		return expiresAt;
-	}
-	
-	public boolean isDeleted() {
-		return deleted;
-	}
-	
-	public OffsetDateTime getCreatedAt() {
-		return createdAt;
-	}
-	
-	public OffsetDateTime getUpdatedAt() {
-		return updatedAt;
-	}
-	
-	public String getLastClickSyncToken() {
-		return lastClickSyncToken;
 	}
 	
 	public void markDeleted() {

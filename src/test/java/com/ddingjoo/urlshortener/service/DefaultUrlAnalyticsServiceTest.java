@@ -4,7 +4,8 @@ import com.ddingjoo.urlshortener.domain.ClickMetricGranularity;
 import com.ddingjoo.urlshortener.domain.Url;
 import com.ddingjoo.urlshortener.domain.UrlClickMetric;
 import com.ddingjoo.urlshortener.dto.url.response.UrlAnalyticsResponse;
-import com.ddingjoo.urlshortener.exception.types.InvalidUrlException;
+import com.ddingjoo.urlshortener.exception.core.BusinessException;
+import com.ddingjoo.urlshortener.exception.core.ErrorCode;
 import com.ddingjoo.urlshortener.repository.UrlClickMetricRepository;
 import com.ddingjoo.urlshortener.repository.UrlRepository;
 import com.ddingjoo.urlshortener.service.analytics.ClickMetricBufferState;
@@ -91,6 +92,8 @@ class DefaultUrlAnalyticsServiceTest {
 				ClickMetricGranularity.HOUR,
 				OffsetDateTime.parse("2026-03-23T03:00:00Z"),
 				OffsetDateTime.parse("2026-03-23T02:00:00Z")
-		)).isInstanceOf(InvalidUrlException.class);
+		)).isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.INVALID_ANALYTICS_RANGE);
 	}
 }

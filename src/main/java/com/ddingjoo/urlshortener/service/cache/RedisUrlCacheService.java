@@ -1,6 +1,7 @@
 package com.ddingjoo.urlshortener.service.cache;
 
 import com.ddingjoo.urlshortener.domain.Url;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -9,16 +10,13 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class RedisUrlCacheService implements UrlCacheService {
 	
 	private static final String URL_KEY_PREFIX = "url:";
 	private static final String GONE_KEY_PREFIX = "url:gone:";
 	
 	private final StringRedisTemplate stringRedisTemplate;
-	
-	public RedisUrlCacheService(StringRedisTemplate stringRedisTemplate) {
-		this.stringRedisTemplate = stringRedisTemplate;
-	}
 	
 	@Override
 	public Optional<String> findOriginalUrl(String shortCode) {

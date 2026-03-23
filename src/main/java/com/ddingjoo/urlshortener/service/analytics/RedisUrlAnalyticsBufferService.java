@@ -1,6 +1,7 @@
 package com.ddingjoo.urlshortener.service.analytics;
 
 import com.ddingjoo.urlshortener.domain.ClickMetricGranularity;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class RedisUrlAnalyticsBufferService implements UrlAnalyticsBufferService {
 	
 	private static final String PREFIX = "url_click_metrics:";
@@ -56,10 +58,6 @@ public class RedisUrlAnalyticsBufferService implements UrlAnalyticsBufferService
 	);
 	
 	private final StringRedisTemplate stringRedisTemplate;
-	
-	public RedisUrlAnalyticsBufferService(StringRedisTemplate stringRedisTemplate) {
-		this.stringRedisTemplate = stringRedisTemplate;
-	}
 	
 	@Override
 	public void increment(String shortCode, ClickMetricGranularity granularity, OffsetDateTime bucketStart) {

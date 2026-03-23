@@ -1,5 +1,6 @@
 package com.ddingjoo.urlshortener.service.lock;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class RedisSchedulerLockService implements SchedulerLockService {
 	
 	private static final String LOCK_PREFIX = "scheduler_lock:";
@@ -37,10 +39,6 @@ public class RedisSchedulerLockService implements SchedulerLockService {
 	
 	private final StringRedisTemplate stringRedisTemplate;
 	
-	public RedisSchedulerLockService(StringRedisTemplate stringRedisTemplate) {
-		this.stringRedisTemplate = stringRedisTemplate;
-	}
-	
 	@Override
 	public Optional<String> acquire(String lockName, Duration ttl) {
 		String token = UUID.randomUUID().toString();
@@ -56,7 +54,7 @@ public class RedisSchedulerLockService implements SchedulerLockService {
 				token,
 				String.valueOf(ttl.toMillis())
 		);
-		return result != null && result == 1L;
+		return result == 1L;
 	}
 	
 	@Override

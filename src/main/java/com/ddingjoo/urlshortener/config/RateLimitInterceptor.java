@@ -3,19 +3,17 @@ package com.ddingjoo.urlshortener.config;
 import com.ddingjoo.urlshortener.service.ratelimit.RateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
+@RequiredArgsConstructor
 public class RateLimitInterceptor implements HandlerInterceptor {
 	
 	private final RateLimitService rateLimitService;
-	
-	public RateLimitInterceptor(RateLimitService rateLimitService) {
-		this.rateLimitService = rateLimitService;
-	}
-	
+
 	@Override
 	public boolean preHandle(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull Object handler) {
 		if (shouldSkip(request.getRequestURI())) {
